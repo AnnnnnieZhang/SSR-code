@@ -61,6 +61,7 @@ class SSRNet(torch.nn.Module):                                                 #
             )
         
         self.use_cls_encoder = conf['model']['latent_feature']['use_cls_encoder']
+        self.use_dino = conf['model']['latent_feature']['encoder']['use_dino']  # 判断是否使用DINO
 
         self.latent_size = conf['model']['latent_feature']['latent_feature_dim']
         if d_latent != self.latent_size:
@@ -149,7 +150,11 @@ class SSRNet(torch.nn.Module):                                                 #
             bdb_roi_feature = F.grid_sample(self.encoder.latent, bdb_grid, align_corners=True, mode='bilinear')     # [B, latent_size, 64, 64]
             global_latent = self.global_encoder(bdb_roi_feature)                        # [B, 256]
 
-            cat_feature = global_latent
+            if self.use_dino:
+                dino_feature = input['dino_feat'].cuda().to(torch.float32)    
+                cat_feature = global_latent + dino_feature
+            else:
+                cat_feature = global_latent
 
         if self.use_cls_encoder:
             cls_encoder = input['cls_encoder'].cuda().to(torch.float32)             # [B, 9]
@@ -273,7 +278,11 @@ class SSRNet(torch.nn.Module):                                                 #
             bdb_roi_feature = F.grid_sample(self.encoder.latent, bdb_grid, align_corners=True, mode='bilinear')     # [B, latent_size, 64, 64]
             global_latent = self.global_encoder(bdb_roi_feature)                        # [B, 256]
 
-            cat_feature = global_latent
+            if self.use_dino:
+                dino_feature = input['dino_feat'].cuda().to(torch.float32)    
+                cat_feature = global_latent + dino_feature
+            else:
+                cat_feature = global_latent
 
         if self.use_cls_encoder:
             cls_encoder = input['cls_encoder'].cuda().to(torch.float32)             # [B, 9]
