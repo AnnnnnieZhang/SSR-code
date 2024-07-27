@@ -17,7 +17,7 @@ eval:
   
 device:
   use_gpu: True
-  gpu_ids: '0'                          # multi-gpu train, e.g. '3,6' will use 3st and 6st gpus
+  gpu_ids: '1'                          # multi-gpu train, e.g. '3,6' will use 3st and 6st gpus
 
 data:
   dataset: FRONT3D
