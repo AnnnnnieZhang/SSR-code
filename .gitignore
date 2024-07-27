@@ -133,3 +133,6 @@ dmypy.json
 data/
 output/
 .vscode/
+
+# Ignore all files in the ssr/diffusion_depth_prior directory
+ssr/diffusion_depth_prior/*
