@@ -14,7 +14,7 @@ from .ray_sampler import ErrorBoundSampler, UniformSampler
 from utils import rend_util, sdf_util
 from ssr.ssr_utils.utils import repeat_interleave
 from ssr.model.Attention_module import Attention_RoI_Module
-
+from ssr.dino.dino_mlp import QuickMLP
 
 class SSRNet(torch.nn.Module):                                                 # modify from MonoSDFNetwork
     def __init__(self, conf):
@@ -62,6 +62,11 @@ class SSRNet(torch.nn.Module):                                                 #
         
         self.use_cls_encoder = conf['model']['latent_feature']['use_cls_encoder']
         self.use_dino = conf['model']['latent_feature']['encoder']['use_dino']  # 判断是否使用DINO
+        if self.use_dino: # 初始化dino相关的学习权重和mlp
+            self.dino_weight = nn.Parameter(torch.tensor(0.4))  # 定义可训练的dino权重参数
+            self.mlp = QuickMLP()
+        
+        self.use_diffu_prior = self.config['model']['latent_feature']['encoder']['use_diffu_prior']  # 判断是否使用Diffusion Prior
 
         self.latent_size = conf['model']['latent_feature']['latent_feature_dim']
         if d_latent != self.latent_size:
@@ -151,8 +156,9 @@ class SSRNet(torch.nn.Module):                                                 #
             global_latent = self.global_encoder(bdb_roi_feature)                        # [B, 256]
 
             if self.use_dino:
-                dino_feature = input['dino_feat'].cuda().to(torch.float32)    
-                cat_feature = global_latent + dino_feature
+                D_feature = input['dino_feat'].cuda().to(torch.float32)
+                dino_feature = self.mlp(D_feature)    
+                cat_feature = (1-self.dino_weight) * global_latent + self.dino_weight * dino_feature
             else:
                 cat_feature = global_latent
 
@@ -172,8 +178,10 @@ class SSRNet(torch.nn.Module):                                                 #
             roi_feat=ret_dict["roi_feat"]
 
         if self.use_encoder:
+            if self.use_diffu_prior:
+                diffu_prior = input['diffu_prior']  # diffu_prior.shape = torch.Size([12, 484, 648])
             latent = self.encoder.index(
-                uv, None, self.image_shape, roi_feat=roi_feat
+                uv, None, self.image_shape, diffu_prior, roi_feat=roi_feat
             )  # (B, latent_size, N_ray)
             if self.stop_encoder_grad:
                 latent = latent.detach()
@@ -279,8 +287,9 @@ class SSRNet(torch.nn.Module):                                                 #
             global_latent = self.global_encoder(bdb_roi_feature)                        # [B, 256]
 
             if self.use_dino:
-                dino_feature = input['dino_feat'].cuda().to(torch.float32)    
-                cat_feature = global_latent + dino_feature
+                D_feature = input['dino_feat'].cuda().to(torch.float32)
+                dino_feature = self.mlp(D_feature)    
+                cat_feature = (1-self.dino_weight) * global_latent + self.dino_weight * dino_feature
             else:
                 cat_feature = global_latent
 
@@ -306,8 +315,10 @@ class SSRNet(torch.nn.Module):                                                 #
                 pred_mask = self.mask_decoder(bdb_roi_feature)                                                  # [B, 1, 64, 64]
 
         if self.use_encoder:
+            if self.use_diffu_prior:
+                diffu_prior = input['diffu_prior']  # diffu_prior.shape = torch.Size([12, 484, 648])
             latent = self.encoder.index(
-                uv, None, self.image_shape, roi_feat=roi_feat
+                uv, None, self.image_shape, diffu_prior, roi_feat=roi_feat
             )  # (B, latent_size, N_ray)
             if self.stop_encoder_grad:
                 latent = latent.detach()
@@ -425,6 +436,11 @@ class SSRNet(torch.nn.Module):                                                 #
             'ray_mask': ray_mask,
         }
 
+        if self.use_dino:
+            output["dino_weight"] = self.dino_weight        
+        if self.use_diffu_prior:
+            output['diffu_weight'] = self.encoder.diffu_weight
+            
         if self.use_instance_mask:
             output['pred_mask'] = pred_mask
 

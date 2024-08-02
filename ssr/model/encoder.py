@@ -6,6 +6,7 @@ import torch.autograd.profiler as profiler
 import numpy as np
 
 from ..ssr_utils.network_utils import get_norm_layer
+from ssr.diffu_feat.diffu_resize_CNN import SimpleResizeCNN
 
 
 def make_encoder(conf, **kwargs):
@@ -35,6 +36,7 @@ class SpatialEncoder(nn.Module):
         feature_scale=1.0,
         use_first_pool=True,
         norm_type="batch",
+        use_diffu_prior = True
     ):
         """
         :param backbone Backbone network. Either custom, in which case
@@ -52,6 +54,7 @@ class SpatialEncoder(nn.Module):
         :param norm_type norm type to applied; pretrained model must use batch
         """
         super().__init__()
+        
 
         if norm_type != "batch":
             assert not pretrained
@@ -59,6 +62,7 @@ class SpatialEncoder(nn.Module):
         self.use_custom_resnet = backbone == "custom"
         self.feature_scale = feature_scale
         self.use_first_pool = use_first_pool
+        self.use_diffu_prior = use_diffu_prior 
         norm_layer = get_norm_layer(norm_type)
 
         if self.use_custom_resnet:
@@ -73,6 +77,10 @@ class SpatialEncoder(nn.Module):
             self.model.fc = nn.Sequential()
             self.model.avgpool = nn.Sequential()
             self.latent_size = [0, 64, 128, 256, 512, 1024][num_layers]
+        
+        if self.use_diffu_prior:
+            self.model_D = SimpleResizeCNN()
+            self.diffu_weight = nn.Parameter(torch.tensor(0.6))  # 定义可训练的权重参数
 
         self.num_layers = num_layers
         self.index_interp = index_interp
@@ -84,7 +92,7 @@ class SpatialEncoder(nn.Module):
         )
         # self.latent (B, L, H, W)
     
-    def index(self, uv, cam_z=None, image_size=(), roi_feat=None, z_bounds=None, offset_xy=None):
+    def index(self, uv, cam_z=None, image_size=(), diffu_prior=None, roi_feat=None, z_bounds=None, offset_xy=None):
         """
         Get pixel-aligned image features at 2D image coordinates
         :param uv (B, N_uv, 2) image points (x,y)
@@ -96,6 +104,12 @@ class SpatialEncoder(nn.Module):
         :param sample_size, if use deformable attention, get sample_size pixel img feature mean
         :return (B, L, N) L is latent size
         """
+        if self.use_diffu_prior:
+            diffu_prior = diffu_prior.cuda().to(torch.float32)
+            self.diffu_latent = self.model_D(diffu_prior)
+            self.latent = self.diffu_weight * self.diffu_latent + (1 - self.diffu_weight) * self.latent
+
+
         with profiler.record_function("encoder_index"):
             if uv.shape[0] == 1 and self.latent.shape[0] > 1:
                 uv = uv.expand(self.latent.shape[0], -1, -1)
@@ -196,6 +210,7 @@ class SpatialEncoder(nn.Module):
             upsample_interp="bilinear",
             feature_scale=1.0,
             use_first_pool=True,
+            use_diffu_prior = conf['use_diffu_prior']  # 判断是否使用Diffusion Prior
         )
 
 

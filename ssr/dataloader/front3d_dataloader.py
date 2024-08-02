@@ -41,6 +41,7 @@ class Front3D_Recon_Dataset(Dataset):
         self.bdb2d_filter = self.config['data']['bdb2d_filter']
         self.soft_pixels = self.config['data']['soft_pixels']
         self.use_dino = self.config['model']['latent_feature']['encoder']['use_dino']
+        self.use_diffu_prior = self.config['model']['latent_feature']['encoder']['use_diffu_prior']
         if mode=="train":
             classnames = self.config['data']['train_class_name']
         elif mode == 'val':
@@ -85,10 +86,14 @@ class Front3D_Recon_Dataset(Dataset):
         
         # 加载dino的位置和信息
         if self.use_dino:
-            dino_CLS_path = 'ssr/dino/dino_features.pt'
+            dino_CLS_path = 'ssr/dino/dino_features768.pt'
             self.dino_CLS_feat = torch.load(dino_CLS_path)
             self.features = self.dino_CLS_feat['features']
             self.img_names = self.dino_CLS_feat['img_name']
+
+        if self.use_diffu_prior:
+            self.diffu_prior_path = 'ssr/diffusion_depth_prior/'
+            self.diffu_prior = None
 
     def __len__(self):
         return len(self.split)
@@ -105,6 +110,18 @@ class Front3D_Recon_Dataset(Dataset):
                 self.dino_feat = self.features[index]
             else:
                 print(f"Image name {img_name} not found in DINO features.")
+
+        if self.use_diffu_prior:
+            # img_name = imgid.split('/')[-1]
+            file_name = os.path.splitext(os.path.basename(imgid))[0] + '_pred.npy'  # 生成完整的文件名
+            file_path = os.path.join(self.diffu_prior_path, file_name)  # 生成文件路径
+            if os.path.exists(file_path):       # 加载 .npy 文件
+                np_data = np.load(file_path)
+                torch_data = torch.from_numpy(np_data).float() # 将 numpy 数组转换为 torch 张量
+                self.diffu_prior = torch_data     # torch.Size([484, 648])
+            else:
+                print(f"File {file_name} does not exist in the folder.")
+            
 
         if self.config['data']['load_dynamic'] == True:
             img_path = os.path.join(self.config['data']['data_path'], imgid)
@@ -359,6 +376,8 @@ class Front3D_Recon_Dataset(Dataset):
 
         if self.use_dino:
             sample["dino_feat"] = self.dino_feat
+        if self.use_diffu_prior:
+            sample["diffu_prior"] = self.diffu_prior
 
         # add bdb3d world points
         if self.add_bdb3d_points:

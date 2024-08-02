@@ -13,18 +13,18 @@ class DINOFeatureExtractor(nn.Module):
         # 从torch.hub加载DINO的预训练ViT模型
         self.dino_model = torch.hub.load('facebookresearch/dino:main', 'dino_vitb16')
         
-        # 定义MLP，将768维度转换为256维度
-        self.mlp = nn.Sequential(
-            nn.Linear(768, 256),
-            nn.LeakyReLU()
-        )
+        # # 定义MLP，将768维度转换为256维度
+        # self.mlp = nn.Sequential(
+        #     nn.Linear(768, 256),
+        #     nn.LeakyReLU()
+        # )
 
     def forward(self, images):
         # 提取[CLS] token特征
         cls_features = self.dino_model(images)  # 提取[CLS] token，尺寸为[batch_size, 768]
-        transformed_features = self.mlp(cls_features)  # 输出尺寸为[batch_size, 256]
+        # transformed_features = self.mlp(cls_features)  # 输出尺寸为[batch_size, 256]
         
-        return transformed_features
+        return cls_features
     
 
 

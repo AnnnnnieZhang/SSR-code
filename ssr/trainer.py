@@ -97,7 +97,7 @@ def Recon_trainer(cfg,model,loss,optimizer,scheduler,train_loader,test_loader,de
                 optimizer.zero_grad()            
 
             psnr = get_psnr(model_outputs['rgb_values'], ground_truth['rgb'].cuda().reshape(-1,3))
-            msg = '{:0>8},[epoch {}] ({}/{}): total_loss = {}, rgb_loss = {}, eikonal_loss = {}, depth_loss = {}, normal_l1 = {}, normal_cos = {}, ray_mask_loss = {}, instance_mask_loss = {}, sdf_loss = {}, vis_sdf_loss = {}, psnr = {}, bete={}, alpha={}'.format(
+            msg = '{:0>8},[epoch {}] ({}/{}): total_loss = {}, rgb_loss = {}, eikonal_loss = {}, depth_loss = {}, normal_l1 = {}, normal_cos = {}, ray_mask_loss = {}, instance_mask_loss = {}, sdf_loss = {}, vis_sdf_loss = {}, psnr = {}, bete={}, alpha={}, dino_weight={}, diffu_weight={} '.format(
                     str(datetime.timedelta(seconds=round(time.time() - start_t))),
                     e,
                     batch_id + 1,
@@ -114,7 +114,9 @@ def Recon_trainer(cfg,model,loss,optimizer,scheduler,train_loader,test_loader,de
                     loss_output['vis_sdf_loss'].item(),
                     psnr.item(),
                     model.module.density.get_beta().item(),
-                    1. / model.module.density.get_beta().item()
+                    1. / model.module.density.get_beta().item(),
+                    model_outputs['dino_weight'].item(),
+                    model_outputs['diffu_weight'].item()
                 )
             cfg.log_string(msg)
 
@@ -131,6 +133,7 @@ def Recon_trainer(cfg,model,loss,optimizer,scheduler,train_loader,test_loader,de
             tb_logger.add_scalar('Loss/vis_sdf_loss', loss_output['vis_sdf_loss'].item(), iter)
             tb_logger.add_scalar('Loss/grad_norm', total_norm, iter)
 
+            tb_logger.add_scalar('Statistics/dino_weight', model_outputs['dino_weight'].item(), iter)
             tb_logger.add_scalar('Statistics/beta', model.module.density.get_beta().item(), iter)
             tb_logger.add_scalar('Statistics/alpha', 1. / model.module.density.get_beta().item(), iter)
             tb_logger.add_scalar('Statistics/psnr', psnr.item(), iter)
@@ -166,7 +169,7 @@ def Recon_trainer(cfg,model,loss,optimizer,scheduler,train_loader,test_loader,de
             
 
                 psnr = get_psnr(model_outputs['rgb_values'], ground_truth['rgb'].cuda().reshape(-1,3))
-                msg = 'Validation {:0>8},[epoch {}] ({}/{}): total_loss = {}, rgb_loss = {}, eikonal_loss = {}, depth_loss = {}, normal_l1 = {}, normal_cos = {}, ray_mask_loss = {}, instance_mask_loss = {}, sdf_loss = {}, vis_sdf_loss = {}, psnr = {}, bete={}, alpha={}'.format(
+                msg = 'Validation {:0>8},[epoch {}] ({}/{}): total_loss = {}, rgb_loss = {}, eikonal_loss = {}, depth_loss = {}, normal_l1 = {}, normal_cos = {}, ray_mask_loss = {}, instance_mask_loss = {}, sdf_loss = {}, vis_sdf_loss = {}, psnr = {}, bete={}, alpha={}, dino_weight={}, diffu_weight={}'.format(
                     str(datetime.timedelta(seconds=round(time.time() - start_t))),
                     e,
                     batch_id + 1,
@@ -183,7 +186,9 @@ def Recon_trainer(cfg,model,loss,optimizer,scheduler,train_loader,test_loader,de
                     loss_output['vis_sdf_loss'].item(),
                     psnr.item(),
                     model.module.density.get_beta().item(),
-                    1. / model.module.density.get_beta().item()
+                    1. / model.module.density.get_beta().item(),
+                    model_outputs['dino_weight'].item(),
+                    model_outputs['diffu_weight'].item()
                 )
                 cfg.log_string(msg)
 

@@ -44,4 +44,4 @@ with torch.no_grad():
 
 # 将特征和索引保存到磁盘
 features = torch.cat(features, dim=0)
-torch.save({'features': features, 'indices': indices, 'img_name': image_names}, 'dino_features.pt')
+torch.save({'features': features, 'indices': indices, 'img_name': image_names}, 'dino_features768.pt')
