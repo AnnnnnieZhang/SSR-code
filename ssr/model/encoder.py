@@ -80,7 +80,7 @@ class SpatialEncoder(nn.Module):
         
         if self.use_diffu_prior:
             self.model_D = SimpleResizeCNN()
-            self.diffu_weight = nn.Parameter(torch.tensor(0.6))  # 定义可训练的权重参数
+            self.diffu_weight = nn.Parameter(torch.tensor(0.8))  # 定义可训练的权重参数
 
         self.num_layers = num_layers
         self.index_interp = index_interp
@@ -107,7 +107,7 @@ class SpatialEncoder(nn.Module):
         if self.use_diffu_prior:
             diffu_prior = diffu_prior.cuda().to(torch.float32)
             self.diffu_latent = self.model_D(diffu_prior)
-            self.latent = self.diffu_weight * self.diffu_latent + (1 - self.diffu_weight) * self.latent
+            self.latent_mix = self.diffu_weight * self.diffu_latent + (1 - self.diffu_weight) * self.latent
 
 
         with profiler.record_function("encoder_index"):
@@ -134,7 +134,7 @@ class SpatialEncoder(nn.Module):
 
             else:
                 samples = F.grid_sample(                # grid_sample, uv[0] --> x --> img_W, uv[1] --> y --> img_H
-                    self.latent,
+                    self.latent_mix,
                     uv,
                     align_corners=True,
                     mode=self.index_interp,

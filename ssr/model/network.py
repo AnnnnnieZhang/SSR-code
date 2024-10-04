@@ -63,7 +63,7 @@ class SSRNet(torch.nn.Module):                                                 #
         self.use_cls_encoder = conf['model']['latent_feature']['use_cls_encoder']
         self.use_dino = conf['model']['latent_feature']['encoder']['use_dino']  # 判断是否使用DINO
         if self.use_dino: # 初始化dino相关的学习权重和mlp
-            self.dino_weight = nn.Parameter(torch.tensor(0.4))  # 定义可训练的dino权重参数
+            self.dino_weight = nn.Parameter(torch.tensor(0.1))  # 定义可训练的dino权重参数
             self.mlp = QuickMLP()
         
         self.use_diffu_prior = self.config['model']['latent_feature']['encoder']['use_diffu_prior']  # 判断是否使用Diffusion Prior

@@ -141,6 +141,9 @@ def Recon_trainer(cfg,model,loss,optimizer,scheduler,train_loader,test_loader,de
             tb_logger.add_scalar("train/lr", current_lr, iter)
 
             iter += 1
+        
+        # 调整学习率
+        scheduler.step()
 
         # after model_save_interval epoch, evaluate the model
         if e % config['other']['model_save_interval'] == 0:
@@ -210,8 +213,8 @@ def Recon_trainer(cfg,model,loss,optimizer,scheduler,train_loader,test_loader,de
                 tb_logger.add_scalar("eval/" + key, eval_loss_info[key], e)
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                 scheduler.step(avg_eval_loss)
-            else:
-                scheduler.step()
+            # else:
+            #     scheduler.step()
 
             checkpoint.register_modules(epoch=e, iter=iter, min_loss=avg_eval_loss)
             if avg_eval_loss < min_eval_loss:

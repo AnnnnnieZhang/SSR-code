@@ -1,9 +1,9 @@
-resume: False                           # if true resume training, start_epoch is the last epoch
+resume: true                           # if true resume training, start_epoch is the last epoch
 finetune: False                         # if true set start_epoch is 0
 method: ssr                            # use the trainer
 exp_name: front3d_ckpt                   # experiment name
 save_root_path: ./output                # save path = os.path.join(save_root_path, exp_name)
-weight: model_latest.pth
+weight: output/front3d_ckpt/model_latest.pth
 show_rendering: False                    # NOTE: True for novel view synthesis
 fix_random_seed: True                   # fix random seed
 
@@ -49,7 +49,7 @@ data:
 
 optimizer:
   type: Adam
-  lr: 0.001
+  lr: 0.00006                            #0.001 
   beta1: 0.9
   beta2: 0.999
   eps: 0.00000001                       # 1e-8
@@ -57,14 +57,14 @@ optimizer:
 
 scheduler:
   type: MultiStepLR
-  milestone: [84,94]        #[330,370]      # milestone value change lr
+  milestone: [700,800]        #[330,370]      # milestone value change lr
   gamma: 0.2
 
 loss:
   use_curriculum_color: True           # use curriculum learning color
   use_curriculum_depth: True
   use_curriculum_normal: True
-  curri_color: [30, 80, 0.0, 0.1]     # [start_step, end_step, start_weight, end_weight]
+  curri_color: [30, 80, 0.0, 0.1]     # [start_step, end_step, start_weight, end_weight] [30, 80, 0.0, 0.1][130, 300, 0.0, 0.1]
   curri_depth: [30, 80, 0.0, 0.1]
   curri_normal: [30, 80, 0.0, 0.01]
   vis_mask_loss: True                   # only calculate color,depth,normal loss on visible mask
@@ -149,8 +149,8 @@ model:
     take_sphere_intersection: False     # if True, define a sampler sphere, model.scene_bounding_sphere will work; 
                                         # if False, define near and far directly, model.ray_sampler.near and model.ray_sampler.far will work
 other:
-  nepoch: 100                           # max epoch 400
-  model_save_interval: 2               # (epoch)
+  nepoch: 800                           # max epoch 400
+  model_save_interval: 1               # (epoch)
   visualize_interval: 1000              # img tenserboard vis    (iter)
   dump_result: True                     # save result
   dump_interval: 1000                   # (iter)
